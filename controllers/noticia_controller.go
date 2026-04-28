@@ -134,3 +134,23 @@ func UpdateNoticia(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, n)
 }
+
+func DeleteNoticia(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	result, err := config.DB.Exec("DELETE FROM blog.noticias WHERE id = $1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Noticia no encontrada"})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
+}
