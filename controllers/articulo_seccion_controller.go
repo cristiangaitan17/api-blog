@@ -13,10 +13,8 @@ import (
 // GetArticuloSecciones obtiene todas las secciones de artículos
 func GetArticuloSecciones(c *gin.Context) {
 	rows, err := config.DB.Query(`
-		SELECT id, COALESCE(articulo_id, 0), COALESCE(titulo_seccion, ''), 
-		       COALESCE(contenido, ''), COALESCE(imagen_url, ''), COALESCE(orden, 0),
-		       COALESCE(activo, true), COALESCE(Fecha_modificacion::text, ''), 
-		       COALESCE(Fecha_creacion::text, '')
+		SELECT id, articulo_id, titulo_seccion, contenido, imagen_url, orden, activo,
+		       Fecha_modificacion, Fecha_creacion
 		FROM blog."articulos_secciones"
 	`)
 	if err != nil {
@@ -30,7 +28,8 @@ func GetArticuloSecciones(c *gin.Context) {
 		var s models.ArticuloSeccion
 		err := rows.Scan(
 			&s.ID, &s.ArticuloID, &s.TituloSeccion, &s.Contenido,
-			&s.ImagenURL, &s.Orden, &s.Activo, &s.FechaModificacion, &s.FechaCreacion,
+			&s.ImagenURL, &s.Orden, &s.Activo,
+			&s.FechaModificacion, &s.FechaCreacion,
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -51,16 +50,15 @@ func GetArticuloSeccionByID(c *gin.Context) {
 
 	var s models.ArticuloSeccion
 	row := config.DB.QueryRow(`
-		SELECT id, COALESCE(articulo_id, 0), COALESCE(titulo_seccion, ''), 
-		       COALESCE(contenido, ''), COALESCE(imagen_url, ''), COALESCE(orden, 0),
-		       COALESCE(activo, true), COALESCE(Fecha_modificacion::text, ''), 
-		       COALESCE(Fecha_creacion::text, '')
+		SELECT id, articulo_id, titulo_seccion, contenido, imagen_url, orden, activo,
+		       Fecha_modificacion, Fecha_creacion
 		FROM blog."articulos_secciones" WHERE id = $1
 	`, id)
 
 	err = row.Scan(
 		&s.ID, &s.ArticuloID, &s.TituloSeccion, &s.Contenido,
-		&s.ImagenURL, &s.Orden, &s.Activo, &s.FechaModificacion, &s.FechaCreacion,
+		&s.ImagenURL, &s.Orden, &s.Activo,
+		&s.FechaModificacion, &s.FechaCreacion,
 	)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
