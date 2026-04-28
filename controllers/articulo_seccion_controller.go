@@ -95,3 +95,37 @@ func CreateArticuloSeccion(c *gin.Context) {
 	s.ID = id
 	c.JSON(http.StatusCreated, s)
 }
+
+func UpdateArticuloSeccion(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var s models.ArticuloSeccion
+	if err := c.ShouldBindJSON(&s); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		UPDATE blog."articulos_secciones" 
+		SET articulo_id = $1, titulo_seccion = $2, contenido = $3, imagen_url = $4,
+		    orden = $5, activo = $6, fecha_modificacion = NOW()
+		WHERE id = $7
+	`
+	result, err := config.DB.Exec(query, s.ArticuloID, s.TituloSeccion, s.Contenido,
+		s.ImagenURL, s.Orden, s.Activo, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
+		return
+	}
+	s.ID = id
+	c.JSON(http.StatusOK, s)
+}
