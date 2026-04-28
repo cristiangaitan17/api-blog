@@ -94,3 +94,43 @@ func CreateNoticia(c *gin.Context) {
 	}
 	c.JSON(http.StatusCreated, n)
 }
+
+func UpdateNoticia(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var n models.Noticia
+	if err := c.ShouldBindJSON(&n); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		UPDATE blog.noticias 
+		SET categoria_id = $1, titulo = $2, contenido = $3, encabezado = $4,
+		    imagen_principal = $5, autor_id = $6, estado = $7, vistas = $8, 
+		    publicado_en = $9, actualizado_en = NOW(), activo = $10
+		WHERE id = $11
+		RETURNING id, categoria_id, titulo, contenido, encabezado, imagen_principal,
+		          autor_id, estado, vistas, publicado_en, creado_en, actualizado_en, activo
+	`
+	row := config.DB.QueryRow(query, n.CategoriaID, n.Titulo, n.Contenido, n.Encabezado,
+		n.ImagenPrincipal, n.AutorID, n.Estado, n.Vistas, n.PublicadoEn, n.Activo, id)
+	err = row.Scan(
+		&n.ID, &n.CategoriaID, &n.Titulo, &n.Contenido, &n.Encabezado,
+		&n.ImagenPrincipal, &n.AutorID, &n.Estado, &n.Vistas, &n.PublicadoEn,
+		&n.CreadoEn, &n.ActualizadoEn, &n.Activo,
+	)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Noticia no encontrada"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, n)
+}
