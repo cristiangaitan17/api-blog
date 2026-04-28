@@ -10,12 +10,13 @@ import (
 	"github.com/cristiangaitan17/api-blog/models"
 )
 
+// GetNoticias obtiene todas las noticias
 func GetNoticias(c *gin.Context) {
 	rows, err := config.DB.Query(`
 		SELECT id, categoria_id, titulo, contenido, encabezado, 
 		       imagen_principal, autor_id, estado, vistas, publicado_en,
 		       creado_en, actualizado_en, activo
-		FROM blog.noticias
+		FROM blog."Noticias"
 	`)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -40,6 +41,7 @@ func GetNoticias(c *gin.Context) {
 	c.JSON(http.StatusOK, noticias)
 }
 
+// GetNoticiaByID obtiene una noticia por ID
 func GetNoticiaByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -52,7 +54,7 @@ func GetNoticiaByID(c *gin.Context) {
 		SELECT id, categoria_id, titulo, contenido, encabezado, 
 		       imagen_principal, autor_id, estado, vistas, publicado_en,
 		       creado_en, actualizado_en, activo
-		FROM blog.noticias WHERE id = $1
+		FROM blog."Noticias" WHERE id = $1
 	`, id)
 
 	err = row.Scan(
@@ -71,6 +73,7 @@ func GetNoticiaByID(c *gin.Context) {
 	c.JSON(http.StatusOK, n)
 }
 
+// CreateNoticia crea una nueva noticia
 func CreateNoticia(c *gin.Context) {
 	var n models.Noticia
 	if err := c.ShouldBindJSON(&n); err != nil {
@@ -79,7 +82,7 @@ func CreateNoticia(c *gin.Context) {
 	}
 
 	query := `
-		INSERT INTO blog.noticias (categoria_id, titulo, contenido, encabezado, 
+		INSERT INTO blog."Noticias" (categoria_id, titulo, contenido, encabezado, 
 		       imagen_principal, autor_id, estado, vistas, publicado_en,
 		       creado_en, actualizado_en, activo)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW(), $10)
@@ -95,6 +98,7 @@ func CreateNoticia(c *gin.Context) {
 	c.JSON(http.StatusCreated, n)
 }
 
+// UpdateNoticia actualiza una noticia existente
 func UpdateNoticia(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -109,7 +113,7 @@ func UpdateNoticia(c *gin.Context) {
 	}
 
 	query := `
-		UPDATE blog.noticias 
+		UPDATE blog."Noticias" 
 		SET categoria_id = $1, titulo = $2, contenido = $3, encabezado = $4,
 		    imagen_principal = $5, autor_id = $6, estado = $7, vistas = $8, 
 		    publicado_en = $9, actualizado_en = NOW(), activo = $10
@@ -135,6 +139,7 @@ func UpdateNoticia(c *gin.Context) {
 	c.JSON(http.StatusOK, n)
 }
 
+// DeleteNoticia elimina una noticia
 func DeleteNoticia(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -142,7 +147,7 @@ func DeleteNoticia(c *gin.Context) {
 		return
 	}
 
-	result, err := config.DB.Exec("DELETE FROM blog.noticias WHERE id = $1", id)
+	result, err := config.DB.Exec("DELETE FROM blog.\"Noticias\" WHERE id = $1", id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
