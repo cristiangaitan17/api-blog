@@ -15,8 +15,8 @@ func GetArticuloSecciones(c *gin.Context) {
 	rows, err := config.DB.Query(`
 		SELECT id, COALESCE(articulo_id, 0), COALESCE(titulo_seccion, ''), 
 		       COALESCE(contenido, ''), COALESCE(imagen_url, ''), COALESCE(orden, 0),
-		       COALESCE(activo, true), COALESCE(fecha_modificacion::text, ''), 
-		       COALESCE(fecha_creacion::text, '')
+		       COALESCE(activo, true), COALESCE(Fecha_modificacion::text, ''), 
+		       COALESCE(Fecha_creacion::text, '')
 		FROM blog."articulos_secciones"
 	`)
 	if err != nil {
@@ -41,6 +41,7 @@ func GetArticuloSecciones(c *gin.Context) {
 	c.JSON(http.StatusOK, secciones)
 }
 
+// GetArticuloSeccionByID obtiene una sección por ID
 func GetArticuloSeccionByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -52,8 +53,8 @@ func GetArticuloSeccionByID(c *gin.Context) {
 	row := config.DB.QueryRow(`
 		SELECT id, COALESCE(articulo_id, 0), COALESCE(titulo_seccion, ''), 
 		       COALESCE(contenido, ''), COALESCE(imagen_url, ''), COALESCE(orden, 0),
-		       COALESCE(activo, true), COALESCE(fecha_modificacion::text, ''), 
-		       COALESCE(fecha_creacion::text, '')
+		       COALESCE(activo, true), COALESCE(Fecha_modificacion::text, ''), 
+		       COALESCE(Fecha_creacion::text, '')
 		FROM blog."articulos_secciones" WHERE id = $1
 	`, id)
 
@@ -72,6 +73,7 @@ func GetArticuloSeccionByID(c *gin.Context) {
 	c.JSON(http.StatusOK, s)
 }
 
+// CreateArticuloSeccion crea una nueva sección
 func CreateArticuloSeccion(c *gin.Context) {
 	var s models.ArticuloSeccion
 	if err := c.ShouldBindJSON(&s); err != nil {
@@ -81,7 +83,7 @@ func CreateArticuloSeccion(c *gin.Context) {
 
 	query := `
 		INSERT INTO blog."articulos_secciones" (articulo_id, titulo_seccion, contenido, imagen_url, 
-		       orden, activo, fecha_modificacion, fecha_creacion)
+		       orden, activo, Fecha_modificacion, Fecha_creacion)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 		RETURNING id
 	`
@@ -96,6 +98,7 @@ func CreateArticuloSeccion(c *gin.Context) {
 	c.JSON(http.StatusCreated, s)
 }
 
+// UpdateArticuloSeccion actualiza una sección existente
 func UpdateArticuloSeccion(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -112,7 +115,7 @@ func UpdateArticuloSeccion(c *gin.Context) {
 	query := `
 		UPDATE blog."articulos_secciones" 
 		SET articulo_id = $1, titulo_seccion = $2, contenido = $3, imagen_url = $4,
-		    orden = $5, activo = $6, fecha_modificacion = NOW()
+		    orden = $5, activo = $6, Fecha_modificacion = NOW()
 		WHERE id = $7
 	`
 	result, err := config.DB.Exec(query, s.ArticuloID, s.TituloSeccion, s.Contenido,
@@ -130,6 +133,7 @@ func UpdateArticuloSeccion(c *gin.Context) {
 	c.JSON(http.StatusOK, s)
 }
 
+// DeleteArticuloSeccion elimina una sección
 func DeleteArticuloSeccion(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
