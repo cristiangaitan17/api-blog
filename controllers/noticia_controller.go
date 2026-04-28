@@ -39,3 +39,34 @@ func GetNoticias(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, noticias)
 }
+
+func GetNoticiaByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var n models.Noticia
+	row := config.DB.QueryRow(`
+		SELECT id, categoria_id, titulo, contenido, encabezado, 
+		       imagen_principal, autor_id, estado, vistas, publicado_en,
+		       creado_en, actualizado_en, activo
+		FROM blog.noticias WHERE id = $1
+	`, id)
+
+	err = row.Scan(
+		&n.ID, &n.CategoriaID, &n.Titulo, &n.Contenido, &n.Encabezado,
+		&n.ImagenPrincipal, &n.AutorID, &n.Estado, &n.Vistas, &n.PublicadoEn,
+		&n.CreadoEn, &n.ActualizadoEn, &n.Activo,
+	)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Noticia no encontrada"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, n)
+}
