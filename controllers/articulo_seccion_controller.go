@@ -129,3 +129,23 @@ func UpdateArticuloSeccion(c *gin.Context) {
 	s.ID = id
 	c.JSON(http.StatusOK, s)
 }
+
+func DeleteArticuloSeccion(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	result, err := config.DB.Exec("DELETE FROM blog.\"articulos_secciones\" WHERE id = $1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
+}
