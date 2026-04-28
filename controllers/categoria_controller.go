@@ -7,30 +7,29 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/cristiangaitan17/api-blog/config"
-	"github.com/cristiangaitan17/api-blog/models"
 )
+
+type CategoriaSimple struct {
+	ID          int    `json:"id"`
+	Nombre      string `json:"nombre"`
+	SeccionLugar string `json:"seccion_lugar"`
+	Descripcion string `json:"descripcion"`
+	Activo      bool   `json:"activo"`
+}
 
 // GetCategorias obtiene todas las categorías
 func GetCategorias(c *gin.Context) {
-	rows, err := config.DB.Query(`
-		SELECT id, nombre, seccion_lugar, descripcion, activo, 
-		       Fecha_modificacion, Fecha_creacion 
-		FROM blog.categorias
-	`)
+	rows, err := config.DB.Query("SELECT id, nombre, seccion_lugar, descripcion, activo FROM blog.categorias")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	defer rows.Close()
 
-	var categorias []models.Categoria
+	var categorias []CategoriaSimple
 	for rows.Next() {
-		var cat models.Categoria
-		err := rows.Scan(
-			&cat.ID, &cat.Nombre, &cat.SeccionLugar, &cat.Descripcion,
-			&cat.Activo, &cat.FechaModificacion, &cat.FechaCreacion,
-		)
-		if err != nil {
+		var cat CategoriaSimple
+		if err := rows.Scan(&cat.ID, &cat.Nombre, &cat.SeccionLugar, &cat.Descripcion, &cat.Activo); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -47,22 +46,13 @@ func GetCategoriaByID(c *gin.Context) {
 		return
 	}
 
-	var cat models.Categoria
-	row := config.DB.QueryRow(`
-		SELECT id, nombre, seccion_lugar, descripcion, activo, 
-		       Fecha_modificacion, Fecha_creacion 
-		FROM blog.categorias WHERE id = $1
-	`, id)
-
-	err = row.Scan(
-		&cat.ID, &cat.Nombre, &cat.SeccionLugar, &cat.Descripcion,
-		&cat.Activo, &cat.FechaModificacion, &cat.FechaCreacion,
-	)
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Categoría no encontrada"})
-		return
-	}
-	if err != nil {
+	var cat CategoriaSimple
+	row := config.DB.QueryRow("SELECT id, nombre, seccion_lugar, descripcion, activo FROM blog.categorias WHERE id = $1", id)
+	if err := row.Scan(&cat.ID, &cat.Nombre, &cat.SeccionLugar, &cat.Descripcion, &cat.Activo); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Categoría no encontrada"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -71,27 +61,26 @@ func GetCategoriaByID(c *gin.Context) {
 
 // CreateCategoria crea una nueva categoría
 func CreateCategoria(c *gin.Context) {
-	var cat models.Categoria
+	var cat CategoriaSimple
 	if err := c.ShouldBindJSON(&cat); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	query := `
-		INSERT INTO blog.categorias (nombre, seccion_lugar, descripcion, activo, Fecha_modificacion, Fecha_creacion)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
-		RETURNING id, Fecha_modificacion, Fecha_creacion
-	`
-	err := config.DB.QueryRow(query, cat.Nombre, cat.SeccionLugar, cat.Descripcion, cat.Activo).
-		Scan(&cat.ID, &cat.FechaModificacion, &cat.FechaCreacion)
+	var id int
+	err := config.DB.QueryRow(
+		"INSERT INTO blog.categorias (nombre, seccion_lugar, descripcion, activo) VALUES ($1, $2, $3, $4) RETURNING id",
+		cat.Nombre, cat.SeccionLugar, cat.Descripcion, cat.Activo,
+	).Scan(&id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	cat.ID = id
 	c.JSON(http.StatusCreated, cat)
 }
 
-// UpdateCategoria actualiza una categoría existente
+// UpdateCategoria actualiza una categoría
 func UpdateCategoria(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -99,31 +88,26 @@ func UpdateCategoria(c *gin.Context) {
 		return
 	}
 
-	var cat models.Categoria
+	var cat CategoriaSimple
 	if err := c.ShouldBindJSON(&cat); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	query := `
-		UPDATE blog.categorias 
-		SET nombre = $1, seccion_lugar = $2, descripcion = $3, activo = $4, Fecha_modificacion = NOW()
-		WHERE id = $5
-		RETURNING id, nombre, seccion_lugar, descripcion, activo, Fecha_modificacion, Fecha_creacion
-	`
-	row := config.DB.QueryRow(query, cat.Nombre, cat.SeccionLugar, cat.Descripcion, cat.Activo, id)
-	err = row.Scan(
-		&cat.ID, &cat.Nombre, &cat.SeccionLugar, &cat.Descripcion,
-		&cat.Activo, &cat.FechaModificacion, &cat.FechaCreacion,
+	result, err := config.DB.Exec(
+		"UPDATE blog.categorias SET nombre = $1, seccion_lugar = $2, descripcion = $3, activo = $4 WHERE id = $5",
+		cat.Nombre, cat.SeccionLugar, cat.Descripcion, cat.Activo, id,
 	)
-	if err == sql.ErrNoRows {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Categoría no encontrada"})
-		return
-	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Categoría no encontrada"})
+		return
+	}
+	cat.ID = id
 	c.JSON(http.StatusOK, cat)
 }
 
@@ -140,8 +124,8 @@ func DeleteCategoria(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	rowsAffected, _ := result.RowsAffected()
-	if rowsAffected == 0 {
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Categoría no encontrada"})
 		return
 	}
