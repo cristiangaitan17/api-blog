@@ -40,3 +40,34 @@ func GetArticuloSecciones(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, secciones)
 }
+
+func GetArticuloSeccionByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var s models.ArticuloSeccion
+	row := config.DB.QueryRow(`
+		SELECT id, COALESCE(articulo_id, 0), COALESCE(titulo_seccion, ''), 
+		       COALESCE(contenido, ''), COALESCE(imagen_url, ''), COALESCE(orden, 0),
+		       COALESCE(activo, true), COALESCE(fecha_modificacion::text, ''), 
+		       COALESCE(fecha_creacion::text, '')
+		FROM blog."articulos_secciones" WHERE id = $1
+	`, id)
+
+	err = row.Scan(
+		&s.ID, &s.ArticuloID, &s.TituloSeccion, &s.Contenido,
+		&s.ImagenURL, &s.Orden, &s.Activo, &s.FechaModificacion, &s.FechaCreacion,
+	)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, s)
+}
