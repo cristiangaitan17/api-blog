@@ -71,3 +71,27 @@ func GetArticuloSeccionByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, s)
 }
+
+func CreateArticuloSeccion(c *gin.Context) {
+	var s models.ArticuloSeccion
+	if err := c.ShouldBindJSON(&s); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		INSERT INTO blog."articulos_secciones" (articulo_id, titulo_seccion, contenido, imagen_url, 
+		       orden, activo, fecha_modificacion, fecha_creacion)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		RETURNING id
+	`
+	var id int
+	err := config.DB.QueryRow(query, s.ArticuloID, s.TituloSeccion, s.Contenido,
+		s.ImagenURL, s.Orden, s.Activo).Scan(&id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.ID = id
+	c.JSON(http.StatusCreated, s)
+}
