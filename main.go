@@ -16,6 +16,7 @@ func main() {
 	// Registrar rutas
 	routes.CategoriaRoutes(router)
 	routes.NoticiaRoutes(router)
+	routes.ArticuloSeccionRoutes(router)
 
 	log.Println("🚀 Servidor corriendo en http://localhost:8080")
 	log.Fatal(router.Run(":8080"))
