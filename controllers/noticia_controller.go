@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/cristiangaitan17/api-blog/config"
@@ -14,8 +15,9 @@ import (
 func GetNoticias(c *gin.Context) {
 	rows, err := config.DB.Query(`
 		SELECT id, COALESCE(categoria_id, 0), titulo, contenido, COALESCE(encabezado, ''), 
-		       COALESCE(imagen_principal, ''), COALESCE(autor_id, 0), estado, vistas, COALESCE(publicado_en, ''),
-		       COALESCE(creado_en, ''), COALESCE(actualizado_en, ''), activo
+		       COALESCE(imagen_principal, ''), COALESCE(autor_id, 0), COALESCE(estado, 'borrador'), 
+		       COALESCE(vistas, 0), COALESCE(publicado_en::text, ''), COALESCE(creado_en::text, ''), 
+		       COALESCE(actualizado_en::text, ''), COALESCE(activo, true)
 		FROM blog."Noticias"
 	`)
 	if err != nil {
@@ -52,8 +54,9 @@ func GetNoticiaByID(c *gin.Context) {
 	var n models.Noticia
 	row := config.DB.QueryRow(`
 		SELECT id, COALESCE(categoria_id, 0), titulo, contenido, COALESCE(encabezado, ''), 
-		       COALESCE(imagen_principal, ''), COALESCE(autor_id, 0), estado, vistas, COALESCE(publicado_en, ''),
-		       COALESCE(creado_en, ''), COALESCE(actualizado_en, ''), activo
+		       COALESCE(imagen_principal, ''), COALESCE(autor_id, 0), COALESCE(estado, 'borrador'), 
+		       COALESCE(vistas, 0), COALESCE(publicado_en::text, ''), COALESCE(creado_en::text, ''), 
+		       COALESCE(actualizado_en::text, ''), COALESCE(activo, true)
 		FROM blog."Noticias" WHERE id = $1
 	`, id)
 
@@ -81,6 +84,14 @@ func CreateNoticia(c *gin.Context) {
 		return
 	}
 
+	// Manejar publicado_en: si está vacío, usar NULL
+	var publicadoEn interface{}
+	if n.PublicadoEn == "" {
+		publicadoEn = nil
+	} else {
+		publicadoEn = n.PublicadoEn
+	}
+
 	query := `
 		INSERT INTO blog."Noticias" (categoria_id, titulo, contenido, encabezado, 
 		       imagen_principal, autor_id, estado, vistas, publicado_en,
@@ -90,7 +101,7 @@ func CreateNoticia(c *gin.Context) {
 	`
 	var id int
 	err := config.DB.QueryRow(query, n.CategoriaID, n.Titulo, n.Contenido, n.Encabezado,
-		n.ImagenPrincipal, n.AutorID, n.Estado, n.Vistas, n.PublicadoEn, n.Activo).Scan(&id)
+		n.ImagenPrincipal, n.AutorID, n.Estado, n.Vistas, publicadoEn, n.Activo).Scan(&id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -113,6 +124,14 @@ func UpdateNoticia(c *gin.Context) {
 		return
 	}
 
+	// Manejar publicado_en: si está vacío, usar NULL
+	var publicadoEn interface{}
+	if n.PublicadoEn == "" {
+		publicadoEn = nil
+	} else {
+		publicadoEn = n.PublicadoEn
+	}
+
 	query := `
 		UPDATE blog."Noticias" 
 		SET categoria_id = $1, titulo = $2, contenido = $3, encabezado = $4,
@@ -121,7 +140,7 @@ func UpdateNoticia(c *gin.Context) {
 		WHERE id = $11
 	`
 	result, err := config.DB.Exec(query, n.CategoriaID, n.Titulo, n.Contenido, n.Encabezado,
-		n.ImagenPrincipal, n.AutorID, n.Estado, n.Vistas, n.PublicadoEn, n.Activo, id)
+		n.ImagenPrincipal, n.AutorID, n.Estado, n.Vistas, publicadoEn, n.Activo, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
