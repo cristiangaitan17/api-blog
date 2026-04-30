@@ -92,3 +92,57 @@ func CreateRespuestaComentario(c *gin.Context) {
 	r.ID = id
 	c.JSON(http.StatusCreated, r)
 }
+
+// UpdateRespuestaComentario actualiza una respuesta existente
+func UpdateRespuestaComentario(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var r models.RespuestaComentario
+	if err := c.ShouldBindJSON(&r); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		UPDATE blog."respuestas_comentario" 
+		SET comentario_id = $1, usuario_id = $2, contenido = $3, activo = $4
+		WHERE id = $5
+	`
+	result, err := config.DB.Exec(query, r.ComentarioID, r.UsuarioID, r.Contenido, r.Activo, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Respuesta no encontrada"})
+		return
+	}
+	r.ID = id
+	c.JSON(http.StatusOK, r)
+}
+
+// DeleteRespuestaComentario elimina una respuesta
+func DeleteRespuestaComentario(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	result, err := config.DB.Exec("DELETE FROM blog.\"respuestas_comentario\" WHERE id = $1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Respuesta no encontrada"})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
+}
