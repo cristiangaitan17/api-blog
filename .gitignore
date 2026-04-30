@@ -1,0 +1,6 @@
+echo ".env" > .gitignore
+echo "vendor/" >> .gitignore
+echo "*.exe" >> .gitignore
+
+git add .gitignore
+git commit -m "chore: add .gitignore to exclude sensitive files"
