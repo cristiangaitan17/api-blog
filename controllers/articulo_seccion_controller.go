@@ -1,0 +1,147 @@
+package controllers
+
+import (
+	"database/sql"
+	"net/http"
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/cristiangaitan17/api-blog/config"
+	"github.com/cristiangaitan17/api-blog/models"
+)
+
+// GetArticuloSecciones obtiene todas las secciones
+func GetArticuloSecciones(c *gin.Context) {
+	rows, err := config.DB.Query(`
+		SELECT id, articulo_id, titulo_seccion, contenido, imagen_url, orden, activo
+		FROM blog."articulos_secciones"
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var secciones []models.ArticuloSeccion
+	for rows.Next() {
+		var s models.ArticuloSeccion
+		err := rows.Scan(
+			&s.ID, &s.ArticuloID, &s.TituloSeccion, &s.Contenido,
+			&s.ImagenURL, &s.Orden, &s.Activo,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		secciones = append(secciones, s)
+	}
+	c.JSON(http.StatusOK, secciones)
+}
+
+// GetArticuloSeccionByID obtiene una sección por ID
+func GetArticuloSeccionByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var s models.ArticuloSeccion
+	row := config.DB.QueryRow(`
+		SELECT id, articulo_id, titulo_seccion, contenido, imagen_url, orden, activo
+		FROM blog."articulos_secciones" WHERE id = $1
+	`, id)
+
+	err = row.Scan(
+		&s.ID, &s.ArticuloID, &s.TituloSeccion, &s.Contenido,
+		&s.ImagenURL, &s.Orden, &s.Activo,
+	)
+	if err == sql.ErrNoRows {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, s)
+}
+
+// CreateArticuloSeccion crea una nueva sección
+func CreateArticuloSeccion(c *gin.Context) {
+	var s models.ArticuloSeccion
+	if err := c.ShouldBindJSON(&s); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		INSERT INTO blog."articulos_secciones" (articulo_id, titulo_seccion, contenido, imagen_url, orden, activo)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+	var id int
+	err := config.DB.QueryRow(query, s.ArticuloID, s.TituloSeccion, s.Contenido,
+		s.ImagenURL, s.Orden, s.Activo).Scan(&id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	s.ID = id
+	c.JSON(http.StatusCreated, s)
+}
+
+// UpdateArticuloSeccion actualiza una sección
+func UpdateArticuloSeccion(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var s models.ArticuloSeccion
+	if err := c.ShouldBindJSON(&s); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		UPDATE blog."articulos_secciones" 
+		SET articulo_id = $1, titulo_seccion = $2, contenido = $3, imagen_url = $4, orden = $5, activo = $6
+		WHERE id = $7
+	`
+	result, err := config.DB.Exec(query, s.ArticuloID, s.TituloSeccion, s.Contenido,
+		s.ImagenURL, s.Orden, s.Activo, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
+		return
+	}
+	s.ID = id
+	c.JSON(http.StatusOK, s)
+}
+
+// DeleteArticuloSeccion elimina una sección
+func DeleteArticuloSeccion(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	result, err := config.DB.Exec("DELETE FROM blog.\"articulos_secciones\" WHERE id = $1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Sección no encontrada"})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
+}
