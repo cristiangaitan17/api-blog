@@ -103,3 +103,58 @@ func CreateNutricion(c *gin.Context) {
 	n.ID = id
 	c.JSON(http.StatusCreated, n)
 }
+// UpdateNutricion actualiza un plan de nutrición
+func UpdateNutricion(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	var n models.Nutricion
+	if err := c.ShouldBindJSON(&n); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		UPDATE blog."Nutricion" 
+		SET nombre = $1, descripcion = $2, objetivo = $3, imagen_url = $4,
+		    autor_id = $5, publicado = $6, activo = $7
+		WHERE id = $8
+	`
+	result, err := config.DB.Exec(query, n.Nombre, n.Descripcion, n.Objetivo, n.ImagenURL,
+		n.AutorID, n.Publicado, n.Activo, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan de nutrición no encontrado"})
+		return
+	}
+	n.ID = id
+	c.JSON(http.StatusOK, n)
+}
+
+// DeleteNutricion elimina un plan de nutrición
+func DeleteNutricion(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	result, err := config.DB.Exec("DELETE FROM blog.\"Nutricion\" WHERE id = $1", id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Plan de nutrición no encontrado"})
+		return
+	}
+	c.JSON(http.StatusNoContent, nil)
+}
