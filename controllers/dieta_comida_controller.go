@@ -69,3 +69,27 @@ func GetDietaComidaByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, d)
 }
+
+// CreateDietaComida crea una nueva comida
+func CreateDietaComida(c *gin.Context) {
+	var d models.DietaComida
+	if err := c.ShouldBindJSON(&d); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		INSERT INTO blog."dieta_comidas" (dieta_id, tiempo_comida, descripcion, orden, activo)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`
+	var id int
+	err := config.DB.QueryRow(query, d.DietaID, d.TiempoComida, d.Descripcion,
+		d.Orden, d.Activo).Scan(&id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	d.ID = id
+	c.JSON(http.StatusCreated, d)
+}
