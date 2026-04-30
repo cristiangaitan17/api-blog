@@ -69,3 +69,26 @@ func GetRespuestaComentarioByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, r)
 }
+
+// CreateRespuestaComentario crea una nueva respuesta
+func CreateRespuestaComentario(c *gin.Context) {
+	var r models.RespuestaComentario
+	if err := c.ShouldBindJSON(&r); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		INSERT INTO blog."respuestas_comentario" (comentario_id, usuario_id, contenido, creado_en, activo)
+		VALUES ($1, $2, $3, NOW(), $4)
+		RETURNING id
+	`
+	var id int
+	err := config.DB.QueryRow(query, r.ComentarioID, r.UsuarioID, r.Contenido, r.Activo).Scan(&id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	r.ID = id
+	c.JSON(http.StatusCreated, r)
+}
