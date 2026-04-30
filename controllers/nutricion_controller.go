@@ -79,3 +79,27 @@ func GetNutricionByID(c *gin.Context) {
 	c.JSON(http.StatusOK, n)
 }
 
+// CreateNutricion crea un nuevo plan de nutrición
+func CreateNutricion(c *gin.Context) {
+	var n models.Nutricion
+	if err := c.ShouldBindJSON(&n); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	query := `
+		INSERT INTO blog."Nutricion" (nombre, descripcion, objetivo, imagen_url, autor_id, 
+		       publicado, creado_en, activo)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
+		RETURNING id
+	`
+	var id int
+	err := config.DB.QueryRow(query, n.Nombre, n.Descripcion, n.Objetivo, n.ImagenURL,
+		n.AutorID, n.Publicado, n.Activo).Scan(&id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	n.ID = id
+	c.JSON(http.StatusCreated, n)
+}
