@@ -17,6 +17,10 @@ func main() {
 	routes.CategoriaRoutes(router)
 	routes.NoticiaRoutes(router)
 	routes.ArticuloSeccionRoutes(router)
+	routes.NutricionRoutes(router)
+	routes.DietaComidaRoutes(router) 
+	routes.ComentarioComunidadRoutes(router)
+	routes.RespuestaComentarioRoutes(router)
 
 	log.Println("🚀 Servidor corriendo en http://localhost:8080")
 	log.Fatal(router.Run(":8080"))
